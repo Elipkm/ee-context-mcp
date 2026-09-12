@@ -1,0 +1,48 @@
+@startuml
+title Personal Developer Context Engine
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam defaultTextAlignment center
+
+actor Developer
+component "Coding Assistant\nCodex / Claude" as Agent
+
+rectangle "Spring Boot Context Engine" as Engine {
+  interface "MCP Endpoint" as MCP
+  component "Task Context\nOrchestrator" as Orchestrator
+  component "Scope Resolver" as Scope
+  component "Context Selector" as Selector
+  component "Wiki Navigator" as Wiki
+  component "Context Update\nManager" as UpdateManager
+  interface "Context DAO" as contextDAO
+
+  MCP --> Orchestrator
+  Orchestrator --> Scope
+  Orchestrator --> Selector
+  Selector --> Wiki
+  Orchestrator --> UpdateManager
+}
+
+folder "Repository" as Repository {
+  rectangle "DEMO engine context" as engineContext {
+  folder "engineering-context/core" as CoreContext
+  folder "engineering-context/work" as WorkContext
+  file "index.md\ncontext map" as ContextIndex
+  }
+  folder "Application Code" as Code
+}
+
+Developer --> Agent : Implementation task\nand update approval
+Agent <--> MCP : Prepare task context; propose/apply updates\nContext plan and reviewable diff
+
+Orchestrator -> contextDAO
+contextDAO --> engineContext
+
+Agent --> Code : implement the change with context
+
+
+
+@enduml

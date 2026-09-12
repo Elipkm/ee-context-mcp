@@ -1,0 +1,83 @@
+@startuml
+title Personal Developer Context Engine
+
+left to right direction
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam defaultTextAlignment center
+
+actor Developer
+component "Coding Assistant\nCodex / Claude" as Agent
+
+rectangle "Spring Boot Context Engine" as Engine {
+  interface "MCP Endpoint" as MCP
+  component "Task Context\nOrchestrator" as Orchestrator
+  component "Scope Resolver" as Scope
+  component "Context Selector" as Selector
+  component "Wiki Navigator" as Wiki
+  component "Context Validator" as Validator
+  component "Context Update\nManager" as UpdateManager
+
+  MCP --> Orchestrator
+  Orchestrator --> Scope
+  Orchestrator --> Selector
+  Selector --> Wiki
+  Orchestrator --> Validator
+  Orchestrator --> UpdateManager
+}
+
+folder "Repository" as Repository {
+  folder "engineering-context/core" as CoreContext
+  folder "engineering-context/work" as WorkContext
+  file "index.md\ncontext map" as ContextIndex
+  folder "Application Code" as Code
+  folder "Automated Tests" as Tests
+}
+
+database "Git\nbranch, changes, history" as Git
+cloud "Enterprise Context Sources\nConfluence, Jira, databases\n(optional extension)" as Enterprise
+
+Developer --> Agent : One implementation task
+Agent --> MCP : prepare_task_context(task)
+
+Scope --> Git : Resolve repository, branch\nand active feature
+Scope --> WorkContext : Restrict feature scope
+
+Selector --> ContextIndex : Discover available knowledge
+Selector --> CoreContext : Select shared context
+Selector --> WorkContext : Select feature context
+Wiki --> ContextIndex : Follow descriptions and links
+
+MCP --> Agent : Context plan\npaths, reasons, exclusions
+Agent --> Repository : Read selected Markdown directly\nexactly once
+
+Agent --> Code : Implement change
+Agent --> Tests : Add and run tests
+
+Agent --> MCP : propose_context_updates(change summary)
+UpdateManager --> Validator : Validate proposed changes
+Validator --> CoreContext : Check structure and consistency
+Validator --> WorkContext : Check completeness and freshness
+UpdateManager --> Agent : Return reviewable diff
+Agent --> Developer : Request approval
+Developer --> Agent : Approve context update
+Agent --> MCP : apply_context_updates(proposal ID)
+UpdateManager --> WorkContext : Write validated Markdown update
+
+Agent --> Git : Commit code, tests and context\nas one focused change
+
+Enterprise ..> Selector : Future ContextSource adapter
+Enterprise ..> UpdateManager : Future managed write adapter
+
+note bottom of Engine
+  MCP is the control plane.
+  It selects, validates and updates context;
+  it does not return a duplicate copy of local files.
+end note
+
+note bottom of Repository
+  Markdown remains the repository-local source of truth.
+end note
+
+@enduml
