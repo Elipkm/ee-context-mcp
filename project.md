@@ -1,4 +1,16 @@
 
+
+Personal Developer Context Engine
+
+The Personal Developer Context Engine is a Spring Boot demo application that provides coding assistants such as Codex or Claude with relevant, repository-specific engineering context through MCP.
+
+Context is stored as transparent Markdown documents, separated into stable core knowledge and living feature documentation. For each development task, the engine identifies the repository and active feature, applies scope boundaries, and uses a wiki-style index to select relevant files. The coding assistant receives their paths, reads them directly, and implements the change with the appropriate context.
+
+After implementation, the assistant can propose updates to the living context. The developer reviews the changes before the engine applies them through an abstract Context DAO.
+
+The demo uses repository-local Markdown, but the same design can later support databases, Confluence, Jira, or other enterprise context sources without changing the central workflow.
+
+
 engineering-context/
 ├── README.md
 ├── domain.md

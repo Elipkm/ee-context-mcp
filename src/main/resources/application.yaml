@@ -1,3 +1,19 @@
 spring:
   application:
-    name: JavaMeetupDemo
+    name: personal-developer-context-engine
+  ai:
+    mcp:
+      server:
+        name: personal-developer-context-engine
+        version: 0.0.1
+        type: SYNC
+        protocol: STATELESS
+        annotation-scanner:
+          enabled: true
+
+server:
+  address: 127.0.0.1
+  port: 8080
+
+context-engine:
+  repository-root: ${user.dir}

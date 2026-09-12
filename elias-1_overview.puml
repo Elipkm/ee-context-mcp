@@ -43,6 +43,4 @@ contextDAO --> engineContext
 
 Agent --> Code : implement the change with context
 
-
-
 @enduml
