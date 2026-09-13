@@ -1,3 +1,9 @@
+---
+id: business-goals
+scope: GLOBAL
+branch:
+tags: [BUSINESS_RULE, DOMAIN]
+---
 # Business goals
 
 This is a transparent personal reference implementation for a Java meetup. It demonstrates that access to repository files is different from selection of the right context.

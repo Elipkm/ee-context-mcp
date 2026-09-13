@@ -1,11 +1,16 @@
+---
+id: domain
+scope: GLOBAL
+branch:
+tags: [BUSINESS_RULE, DOMAIN]
+---
 # Domain
 
 The engine supports a developer working with a coding assistant on one repository task.
 
-- A **task** is the requested code change.
-- A **scope** is the configured repository, current Git branch and active feature.
-- A **context map** is the Markdown index describing available knowledge and when it matters.
-- A **context plan** is the selected file-path manifest with inclusion and exclusion reasons.
-- A **proposal** is a validated, reviewable set of living-context changes that has not yet been applied.
+- A **context document** is Markdown with a stable ID, scope, branch and tags.
+- A **global document** is eligible on every branch but is returned only when its tags match.
+- A **branch document** is eligible only when its branch matches the request exactly.
+- A **version** identifies the complete stored document and protects updates from stale writes.
 
-The coding assistant owns code changes and test execution. The engine owns context discovery, scope enforcement and the review/apply lifecycle. The developer owns approval.
+The coding assistant decides which tags a task needs and how to use the returned documents. The engine owns deterministic filtering and safe full-document replacement.

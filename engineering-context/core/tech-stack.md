@@ -1,3 +1,9 @@
+---
+id: tech-stack
+scope: GLOBAL
+branch:
+tags: [ARCHITECTURE, IMPL]
+---
 # Tech stack
 
 - Java 25
@@ -7,4 +13,4 @@
 - Repository-local Markdown
 - JUnit 5 and Spring Boot Test
 
-The demo uses synchronous services and in-memory proposal state to keep the main lifecycle easy to explain.
+The demo uses synchronous services and repository-local metadata to keep the lifecycle easy to explain.

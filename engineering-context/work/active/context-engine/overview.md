@@ -1,13 +1,20 @@
+---
+id: context-engine-overview
+scope: BRANCH
+branch: codex-impl-2
+tags: [ARCHITECTURE, FEATURE, IMPL]
+---
 # Context engine implementation
 
 ## Acceptance criteria
 
-- A coding assistant can request a task context plan over MCP.
-- The plan reports repository, branch, feature, included paths, reasons and exclusions.
-- The assistant can submit living-context replacements and receive a diff without changing files.
-- Applying requires an approved proposal ID and refuses stale proposals.
+- MCP exposes only `get_context` and `update_context`.
+- Inputs are structured DTOs assembled by the coding assistant.
+- Retrieval returns complete documents with IDs, versions and tags.
+- Global and exact-branch documents are filtered with OR tag matching.
+- Updates are full replacements and reject stale versions.
 - Local Markdown access is replaceable through `ContextDao`.
 
 ## Current decisions
 
-Selection uses a small deterministic policy: baseline technical context plus active-feature and task-keyword matches from the wiki index. Proposal state is in memory, which is sufficient for the single-process demo.
+Selection uses scope and tags only. The coding assistant owns the semantic decision about which tags its task requires.

@@ -1,42 +1,70 @@
 package at.ee.dev.javameetupdemo.context;
 
 import java.util.List;
+import java.util.Set;
 
 public final class ContextModels {
 
     private ContextModels() {
     }
 
-    public record SelectedDocument(String path, String reason) {
+    public enum ContextScope {
+        GLOBAL,
+        BRANCH
     }
 
-    public record ExcludedDocument(String path, String reason) {
+    public enum Tag {
+        FEATURE,
+        BUG,
+        IMPL,
+        TEST,
+        ARCHITECTURE,
+        DOMAIN,
+        BUSINESS_RULE,
+        DOCUMENTATION
     }
 
-    public record ContextPlan(
+    public record GetContextInput(
             String task,
-            String repository,
+            String descriptionShort,
             String branch,
-            String feature,
-            List<SelectedDocument> included,
-            List<ExcludedDocument> excluded,
-            String instruction) {
+            Set<Tag> tags) {
     }
 
-    public record ProposedChange(String path, String content) {
+    public record ContextDocument(
+            String id,
+            String markdown,
+            String version,
+            Set<Tag> tags) {
     }
 
-    public record FileDiff(String path, String operation, String diff) {
+    public record UpdateContextInput(
+            String descriptionShort,
+            String branch,
+            List<DocumentUpdate> documents) {
     }
 
-    public record UpdateProposal(
-            String proposalId,
-            String summary,
-            List<FileDiff> changes,
-            String status,
-            String instruction) {
+    public record DocumentUpdate(
+            String id,
+            String expectedVersion,
+            String markdown,
+            Set<Tag> tags) {
     }
 
-    public record ApplyResult(String proposalId, List<String> updatedPaths, String status) {
+    public record UpdatedDocument(String id, String version) {
+    }
+
+    public record StoredContextDocument(
+            String id,
+            String path,
+            String markdown,
+            String version,
+            ContextScope scope,
+            String branch,
+            Set<Tag> tags) {
+
+        public ContextDocument toContextDocument() {
+            return new ContextDocument(id, markdown, version, tags);
+        }
     }
 }

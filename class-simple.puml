@@ -1,0 +1,61 @@
+@startuml
+
+class GetContextInputDTO {
+  String task
+  String descriptionShort
+  String branch
+  Set<Tag> tags
+}
+
+class ContextDocumentDTO {
+  String id
+  String markdown
+  String version
+  Set<Tag> tags
+}
+
+class UpdateContextInputDTO {
+  String descriptionShort
+  String branch
+  List<DocumentUpdateDTO> documents
+}
+
+class DocumentUpdateDTO {
+  String id
+  String expectedVersion
+  String markdown
+  Set<Tag> tags
+}
+
+enum ContextScope {
+  GLOBAL
+  BRANCH
+}
+
+enum Tag {
+  FEATURE
+  BUG
+  IMPL
+  TEST
+  ARCHITECTURE
+  DOMAIN
+  BUSINESS_RULE
+  DOCUMENTATION
+}
+
+GetContextInputDTO --> Tag
+ContextDocumentDTO --> Tag
+UpdateContextInputDTO --> DocumentUpdateDTO
+DocumentUpdateDTO --> Tag
+
+note right of GetContextInputDTO
+  Branch is an exact filter.
+  Tags use OR matching.
+end note
+
+note right of ContextScope
+  Scope is stored as document metadata.
+  GLOBAL documents are not automatically returned.
+end note
+
+@enduml

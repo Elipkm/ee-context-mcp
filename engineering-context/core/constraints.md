@@ -1,9 +1,14 @@
+---
+id: constraints
+scope: GLOBAL
+branch:
+tags: [ARCHITECTURE, IMPL]
+---
 # Constraints
 
-- Only the configured repository may be selected.
-- Resolved paths must remain below the repository root.
-- MCP returns selected paths, not duplicate file content.
-- Context writes are limited to `.md` files below `engineering-context/work/`.
-- Applying a proposal requires explicit developer approval.
-- A proposal must be rejected if a target changed after its diff was produced.
+- Context is read only from the configured repository.
+- Branch-scoped context must match the requested branch exactly.
+- Tags use OR matching.
+- Updates replace existing documents; they do not create or delete documents.
+- An update must be rejected when its expected version is stale.
 - HTTP access is local-only unless a real authentication boundary is added.

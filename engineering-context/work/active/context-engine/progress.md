@@ -1,10 +1,16 @@
+---
+id: context-engine-progress
+scope: BRANCH
+branch: codex-impl-2
+tags: [FEATURE, IMPL, TEST]
+---
 # Context engine progress
 
 - MCP server transport configured on localhost.
-- Prepare, propose and apply tools implemented.
-- Repository scope, safe path resolution and branch-based feature inference implemented.
-- Wiki-index selection and transparent reasons implemented.
-- Reviewable update proposals, approval gate and stale-write protection implemented.
-- Automated workflow tests added.
+- Two-tool context workflow implemented.
+- Markdown front-matter metadata introduced.
+- Exact-branch/global filtering and OR tag matching implemented.
+- Version-protected full replacement implemented.
+- Focused workflow tests added.
 
-Future extensions may persist proposals, rank large context collections and provide enterprise `ContextDao` adapters.
+Future extensions may add managed context sources and organization-level governance.

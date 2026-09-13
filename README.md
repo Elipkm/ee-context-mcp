@@ -1,16 +1,36 @@
 # Personal Developer Context Engine
 
-A small Spring Boot MCP server that gives coding assistants the right repository-local engineering context for a task and lets them propose reviewable documentation updates.
+A small Spring Boot MCP server that gives a coding assistant tagged, repository-local engineering context.
 
-## Core workflow
+## The two MCP tools
 
-1. Call `prepare_task_context` with the coding task and optional feature name.
-2. Read each returned Markdown path once, then implement and test the change.
-3. Call `propose_context_updates` with complete replacement content for changed files below `engineering-context/work/`.
-4. Show the returned diff to the developer.
-5. Only after explicit approval, call `apply_context_updates` with the proposal ID and `approved: true`.
+1. `get_context` receives the task, a short description, the exact Git branch and the tags chosen by the assistant.
+2. `update_context` replaces existing documents by ID and requires the version returned by `get_context`.
 
-The server deliberately returns paths instead of duplicating local file contents through MCP. Scope is restricted to the configured repository and context writes are restricted to living work documentation.
+Retrieval uses two simple rules:
+
+- Global documents and documents for the exact requested branch are eligible.
+- A document is returned when any requested tag matches.
+
+Each result contains the complete Markdown body, stable document ID, version and tags. The assistant decides how to use the returned documents.
+
+## Context document format
+
+Context lives below `engineering-context/` and uses small YAML front matter:
+
+```markdown
+---
+id: order-cancellation
+scope: BRANCH
+branch: feature/order-cancellation
+tags: [BUSINESS_RULE, FEATURE, TEST]
+---
+# Order cancellation
+
+Complete context goes here.
+```
+
+Use `scope: GLOBAL` with an empty `branch:` for context that can apply to every branch. Global context is still returned only when one of its tags is requested.
 
 ## Run
 
@@ -27,10 +47,10 @@ Example Codex configuration:
 url = "http://127.0.0.1:8080/mcp"
 ```
 
-Override the repository if the process starts elsewhere:
+Set the repository in `application.yaml` or override it when starting the application:
 
 ```powershell
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--context-engine.repository-root=C:\path\to\repository"
 ```
 
-HTTP MCP transports have no authentication in this demo, so the server binds to localhost only.
+HTTP MCP transport has no authentication in this demo, so the server binds to localhost only.

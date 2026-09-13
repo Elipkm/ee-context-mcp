@@ -1,7 +1,13 @@
+---
+id: architecture
+scope: GLOBAL
+branch:
+tags: [ARCHITECTURE, IMPL]
+---
 # Architecture
 
-MCP is the control plane. It exposes three tools: prepare task context, propose context updates and apply an approved proposal.
+MCP is the control plane. It exposes two tools: `get_context` and `update_context`.
 
-The task orchestrator asks the scope resolver for the repository, branch and feature. The selector navigates `engineering-context/index.md`, includes baseline engineering documents, adds matching feature or cross-cutting context, and reports exclusions. It returns paths rather than file content.
+The coding assistant turns its task into a structured request containing the exact Git branch and relevant tags. The context service returns complete matching Markdown documents. Global documents and documents belonging to the exact branch are eligible; requested tags use OR matching.
 
-The update manager validates proposed complete-file replacements, builds a reviewable diff and retains their original hashes. Apply rechecks those hashes to prevent overwriting context changed since review. All storage access crosses the `ContextDao` interface.
+Updates are complete document replacements addressed by stable document ID. A version from `get_context` must match before an update is written. Storage remains behind the `ContextDao` interface.

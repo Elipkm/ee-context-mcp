@@ -16,4 +16,5 @@ server:
   port: 8080
 
 context-engine:
-  repository-root: ${user.dir}
+  #repository-root: ${user.dir}
+  repository-root: C:\Users\elipk\Desktop\Elias_2026\JavaMeetupDemo\UseDemo_DevelopGame
