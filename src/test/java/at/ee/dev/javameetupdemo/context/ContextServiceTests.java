@@ -1,9 +1,8 @@
 package at.ee.dev.javameetupdemo.context;
 
 import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
-import at.ee.dev.javameetupdemo.context.dto.DocumentUpdate;
 import at.ee.dev.javameetupdemo.context.impl.ContextService;
-import at.ee.dev.javameetupdemo.context.impl.FileSystemContextDao;
+import at.ee.dev.javameetupdemo.context.impl.FileSystemIContextDao;
 import at.ee.dev.javameetupdemo.mcp.GetContextInput;
 import at.ee.dev.javameetupdemo.context.enumm.Tag;
 import at.ee.dev.javameetupdemo.mcp.UpdateContextInput;
@@ -29,7 +28,7 @@ class ContextServiceTests {
 
     @BeforeEach
     void setUp() {
-        contextService = new ContextService(new FileSystemContextDao(repository.toString()));
+        contextService = new ContextService(new FileSystemIContextDao(repository.toString()));
     }
 
     @Test
@@ -61,7 +60,7 @@ class ContextServiceTests {
         var result = contextService.updateContext(new UpdateContextInput(
                 "Document the new scenarios",
                 "feature/orders",
-                List.of(new DocumentUpdate(
+                List.of(ContextDocument.update(
                         document.id(), document.version(), "# New tests", Set.of(Tag.TEST, Tag.FEATURE)))));
 
         var updated = get("feature/orders", Tag.FEATURE);
@@ -77,8 +76,8 @@ class ContextServiceTests {
         var documents = contextService.getContext(request("feature/orders", Tag.TEST));
 
         var updates = List.of(
-                new DocumentUpdate("first", documents.get(0).version(), "# Changed first", Set.of(Tag.TEST)),
-                new DocumentUpdate("second", "stale-version", "# Changed second", Set.of(Tag.TEST)));
+                ContextDocument.update("first", documents.get(0).version(), "# Changed first", Set.of(Tag.TEST)),
+                ContextDocument.update("second", "stale-version", "# Changed second", Set.of(Tag.TEST)));
 
         assertThatThrownBy(() -> contextService.updateContext(
                 new UpdateContextInput("Change both", "feature/orders", updates)))
@@ -95,7 +94,7 @@ class ContextServiceTests {
         assertThatThrownBy(() -> contextService.updateContext(new UpdateContextInput(
                 "Wrong branch",
                 "feature/orders",
-                List.of(new DocumentUpdate(search.id(), search.version(), "# Orders", Set.of(Tag.FEATURE))))))
+                List.of(ContextDocument.update(search.id(), search.version(), "# Orders", Set.of(Tag.FEATURE))))))
                 .hasMessageContaining("does not belong to branch feature/orders");
     }
 

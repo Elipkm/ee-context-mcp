@@ -1,7 +1,6 @@
 package at.ee.dev.javameetupdemo.mcp;
 
 import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
-import at.ee.dev.javameetupdemo.context.dto.UpdatedDocument;
 import at.ee.dev.javameetupdemo.context.impl.ContextService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +38,7 @@ public class ContextEngineTools {
             description = "Fully replace existing context documents by id. Every replacement must contain the version returned by get_context.",
             generateOutputSchema = true,
             annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false))
-    public List<UpdatedDocument> updateContext(
+    public List<ContextDocument> updateContext(
             @McpToolParam(description = "Exact Git branch, reason and version-protected full document replacements", required = true)
             UpdateContextInput input) {
         log.info("MCP update_context request received");

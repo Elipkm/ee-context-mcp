@@ -1,9 +1,8 @@
 package at.ee.dev.javameetupdemo.context.impl;
 
-import at.ee.dev.javameetupdemo.context.RuntimeException;
-import at.ee.dev.javameetupdemo.context.api.ContextDao;
+import at.ee.dev.javameetupdemo.context.api.IContextDao;
 import at.ee.dev.javameetupdemo.context.enumm.ContextScope;
-import at.ee.dev.javameetupdemo.context.dto.StoredContextDocument;
+import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
 import at.ee.dev.javameetupdemo.context.enumm.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,20 +22,20 @@ import java.util.List;
 import java.util.Set;
 
 @Repository
-public class FileSystemContextDao implements ContextDao {
+public class FileSystemIContextDao implements IContextDao {
 
-    private static final Logger log = LoggerFactory.getLogger(FileSystemContextDao.class);
+    private static final Logger log = LoggerFactory.getLogger(FileSystemIContextDao.class);
     private static final String CONTEXT_DIRECTORY = "engineering-context";
     private static final String FRONT_MATTER_SEPARATOR = "---";
 
     private final Path repositoryRoot;
 
-    public FileSystemContextDao(@Value("${context-engine.repository-root}") String repositoryRoot) {
+    public FileSystemIContextDao(@Value("${context-engine.repository-root}") String repositoryRoot) {
         this.repositoryRoot = Path.of(repositoryRoot).toAbsolutePath().normalize();
     }
 
     @Override
-    public List<StoredContextDocument> findAll() {
+    public List<ContextDocument> findAll() {
         Path contextDirectory = resolve(CONTEXT_DIRECTORY);
         if (!Files.isDirectory(contextDirectory)) {
             log.info("No context directory found at {}", contextDirectory);
@@ -44,7 +43,7 @@ public class FileSystemContextDao implements ContextDao {
         }
 
         try (var files = Files.walk(contextDirectory)) {
-            List<StoredContextDocument> documents = files
+            List<ContextDocument> documents = files
                     .filter(Files::isRegularFile)
                     .filter(path -> path.getFileName().toString().endsWith(".md"))
                     .sorted()
@@ -59,21 +58,21 @@ public class FileSystemContextDao implements ContextDao {
     }
 
     @Override
-    public StoredContextDocument write(StoredContextDocument document) {
+    public ContextDocument write(ContextDocument document) {
         Path path = resolve(document.path());
         String fileContent = serialize(document);
         try {
             Files.createDirectories(path.getParent());
             Files.writeString(path, fileContent);
             log.info("Updated context document id={} path={}", document.id(), document.path());
-            return new StoredContextDocument(document.id(), document.path(), document.markdown(), hash(fileContent),
-                    document.scope(), document.branch(), Set.copyOf(document.tags()));
+            return new ContextDocument(document.id(), document.path(), document.markdown(), document.expectedVersion(),
+                    hash(fileContent), document.scope(), document.branch(), Set.copyOf(document.tags()));
         } catch (IOException exception) {
             throw new RuntimeException("Could not write context document " + document.id(), exception);
         }
     }
 
-    private StoredContextDocument read(Path path) {
+    private ContextDocument read(Path path) {
         try {
             String fileContent = Files.readString(path);
             String normalized = fileContent.replace("\r\n", "\n");
@@ -95,13 +94,13 @@ public class FileSystemContextDao implements ContextDao {
             validateMetadata(path, id, scope, branch, tags);
 
             String relativePath = repositoryRoot.relativize(path).toString().replace('\\', '/');
-            return new StoredContextDocument(id, relativePath, markdown, hash(fileContent), scope, branch, tags);
+            return new ContextDocument(id, relativePath, markdown, null, hash(fileContent), scope, branch, tags);
         } catch (IOException exception) {
             throw new RuntimeException("Could not read context document " + path, exception);
         }
     }
 
-    private String serialize(StoredContextDocument document) {
+    private String serialize(ContextDocument document) {
         String branch = document.scope() == ContextScope.BRANCH ? document.branch() : "";
         String tags = document.tags().stream()
                 .map(Enum::name)
@@ -182,7 +181,7 @@ public class FileSystemContextDao implements ContextDao {
         }
     }
 
-    private void ensureUniqueIds(List<StoredContextDocument> documents) {
+    private void ensureUniqueIds(List<ContextDocument> documents) {
         Set<String> ids = new HashSet<>();
         documents.forEach(document -> {
             if (!ids.add(document.id())) {

@@ -54,3 +54,9 @@ Set the repository in `application.yaml` or override it when starting the applic
 ```
 
 HTTP MCP transport has no authentication in this demo, so the server binds to localhost only.
+
+For using add to your working Repository AGENTS.md the following instructions:
+    """use developer-context mcp server to manage and get relevant context
+        before starting the task get relevant context by calling the get_context tool
+        when finished give a brief summary what context must be persisted and 
+        after user confirmation call tool update_context"""
