@@ -3,6 +3,7 @@ package at.ee.dev.javameetupdemo.context.impl;
 import at.ee.dev.javameetupdemo.context.api.IContextDao;
 import at.ee.dev.javameetupdemo.context.enumm.ContextScope;
 import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
+import at.ee.dev.javameetupdemo.context.dto.ContextMetadata;
 import at.ee.dev.javameetupdemo.context.enumm.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +50,7 @@ public class FileSystemIContextDao implements IContextDao {
                     .sorted()
                     .map(this::read)
                     .toList();
-            ensureUniqueIds(documents);
+            this.ensureUniqueIds(documents);
             log.info("Loaded {} context documents from {}", documents.size(), contextDirectory);
             return documents;
         } catch (IOException exception) {
@@ -65,8 +66,8 @@ public class FileSystemIContextDao implements IContextDao {
             Files.createDirectories(path.getParent());
             Files.writeString(path, fileContent);
             log.info("Updated context document id={} path={}", document.id(), document.path());
-            return new ContextDocument(document.id(), document.path(), document.markdown(), document.expectedVersion(),
-                    hash(fileContent), document.scope(), document.branch(), Set.copyOf(document.tags()));
+            return new ContextDocument(document.id(), document.path(), normalizeMarkdown(document.markdown()), hash(fileContent),
+                    document.branch(), new ContextMetadata(document.metadata().scope(), Set.copyOf(document.metadata().tags())));
         } catch (IOException exception) {
             throw new RuntimeException("Could not write context document " + document.id(), exception);
         }
@@ -94,23 +95,21 @@ public class FileSystemIContextDao implements IContextDao {
             validateMetadata(path, id, scope, branch, tags);
 
             String relativePath = repositoryRoot.relativize(path).toString().replace('\\', '/');
-            return new ContextDocument(id, relativePath, markdown, null, hash(fileContent), scope, branch, tags);
+            return new ContextDocument(id, relativePath, markdown, hash(fileContent), branch,
+                    new ContextMetadata(scope, tags));
         } catch (IOException exception) {
             throw new RuntimeException("Could not read context document " + path, exception);
         }
     }
 
     private String serialize(ContextDocument document) {
-        String branch = document.scope() == ContextScope.BRANCH ? document.branch() : "";
-        String tags = document.tags().stream()
+        String branch = document.metadata().scope() == ContextScope.BRANCH ? document.branch() : "";
+        String tags = document.metadata().tags().stream()
                 .map(Enum::name)
                 .sorted()
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("");
-        String markdown = document.markdown().replace("\r\n", "\n");
-        if (!markdown.endsWith("\n")) {
-            markdown += "\n";
-        }
+        String markdown = normalizeMarkdown(document.markdown());
         return """
                 ---
                 id: %s
@@ -118,7 +117,12 @@ public class FileSystemIContextDao implements IContextDao {
                 branch: %s
                 tags: [%s]
                 ---
-                %s""".formatted(document.id(), document.scope(), branch, tags, markdown);
+                %s""".formatted(document.id(), document.metadata().scope(), branch, tags, markdown);
+    }
+
+    private String normalizeMarkdown(String markdown) {
+        String normalized = markdown.replace("\r\n", "\n");
+        return normalized.endsWith("\n") ? normalized : normalized + "\n";
     }
 
     private String metadataValue(String metadata, String key, Path path) {

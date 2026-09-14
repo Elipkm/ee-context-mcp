@@ -1,7 +1,7 @@
 package at.ee.dev.javameetupdemo.mcp;
 
-import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
-import at.ee.dev.javameetupdemo.context.impl.ContextService;
+import at.ee.dev.javameetupdemo.context.dto.McpContextDocument;
+import at.ee.dev.javameetupdemo.context.api.IContextService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
@@ -15,9 +15,9 @@ public class ContextEngineTools {
 
     private static final Logger log = LoggerFactory.getLogger(ContextEngineTools.class);
 
-    private final ContextService contextService;
+    private final IContextService contextService;
 
-    public ContextEngineTools(ContextService contextService) {
+    public ContextEngineTools(IContextService contextService) {
         this.contextService = contextService;
     }
 
@@ -26,7 +26,7 @@ public class ContextEngineTools {
             description = "Get context documents relevant to a task. Global and exact-branch documents are matched by any requested tag.",
             generateOutputSchema = true,
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false))
-    public List<ContextDocument> getContext(
+    public List<McpContextDocument> getContext(
             @McpToolParam(description = "Task, exact Git branch and context tags selected by the coding agent", required = true)
             GetContextInput input) {
         log.info("MCP get_context request received");
@@ -35,11 +35,11 @@ public class ContextEngineTools {
 
     @McpTool(
             name = "update_context",
-            description = "Fully replace existing context documents by id. Every replacement must contain the version returned by get_context.",
+            description = "Fully replace existing context documents by id. Every replacement must contain context and metadata.",
             generateOutputSchema = true,
             annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false))
-    public List<ContextDocument> updateContext(
-            @McpToolParam(description = "Exact Git branch, reason and version-protected full document replacements", required = true)
+    public List<McpContextDocument> updateContext(
+            @McpToolParam(description = "Exact Git branch, reason and full document replacements", required = true)
             UpdateContextInput input) {
         log.info("MCP update_context request received");
         return contextService.updateContext(input);

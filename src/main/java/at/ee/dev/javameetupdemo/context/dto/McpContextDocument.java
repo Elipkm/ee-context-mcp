@@ -1,6 +1,4 @@
-package at.ee.dev.javameetupdemo.mcp;
-
-import at.ee.dev.javameetupdemo.context.dto.ContextMetadata;
+package at.ee.dev.javameetupdemo.context.dto;
 
 public record McpContextDocument
         (String id,

@@ -18,10 +18,10 @@ The central idea is simple:
 
 1. The assistant receives an implementation task.
 2. It calls `get_context` with the exact branch and relevant tags.
-3. The engine returns matching documents with stable IDs and versions.
+3. The engine returns matching documents with stable IDs and metadata.
 4. The assistant implements and tests the change.
-5. When context has changed, the assistant calls `update_context` with complete replacements and the versions it previously read.
-6. The engine rejects stale replacements and writes valid updates.
+5. When context has changed, the assistant calls `update_context` with complete replacements.
+6. The engine validates and writes the replacements.
 
 ## Selection rules
 

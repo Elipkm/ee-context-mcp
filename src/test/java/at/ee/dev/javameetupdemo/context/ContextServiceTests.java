@@ -1,6 +1,8 @@
 package at.ee.dev.javameetupdemo.context;
 
-import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
+import at.ee.dev.javameetupdemo.context.dto.ContextMetadata;
+import at.ee.dev.javameetupdemo.context.dto.McpContextDocument;
+import at.ee.dev.javameetupdemo.context.enumm.ContextScope;
 import at.ee.dev.javameetupdemo.context.impl.ContextService;
 import at.ee.dev.javameetupdemo.context.impl.FileSystemIContextDao;
 import at.ee.dev.javameetupdemo.mcp.GetContextInput;
@@ -46,44 +48,41 @@ class ContextServiceTests {
 
         var result = contextService.getContext(request);
 
-        assertThat(result).extracting(ContextDocument::id)
+        assertThat(result).extracting(McpContextDocument::id)
                 .containsExactly("global-architecture", "order-tests");
-        assertThat(result.getFirst().markdown()).isEqualTo("# Architecture\n");
-        assertThat(result.getFirst().version()).hasSize(64);
+        assertThat(result.getFirst().context()).isEqualTo("# Architecture\n");
+        assertThat(result.getFirst().metadata().scope()).isEqualTo(ContextScope.GLOBAL);
     }
 
     @Test
-    void replacesACompleteDocumentAndReturnsItsNewVersion() throws IOException {
+    void replacesACompleteDocumentAndReturnsTheUpdatedContract() throws IOException {
         writeDocument("order-tests", "BRANCH", "feature/orders", "TEST", "# Old tests");
         var document = get("feature/orders", Tag.TEST);
 
         var result = contextService.updateContext(new UpdateContextInput(
                 "Document the new scenarios",
                 "feature/orders",
-                List.of(ContextDocument.update(
-                        document.id(), document.version(), "# New tests", Set.of(Tag.TEST, Tag.FEATURE)))));
+                List.of(update(document.id(), "# New tests", Tag.TEST, Tag.FEATURE))));
 
         var updated = get("feature/orders", Tag.FEATURE);
-        assertThat(updated.markdown()).isEqualTo("# New tests\n");
-        assertThat(updated.tags()).containsExactlyInAnyOrder(Tag.TEST, Tag.FEATURE);
-        assertThat(result.getFirst().version()).isEqualTo(updated.version()).isNotEqualTo(document.version());
+        assertThat(updated.context()).isEqualTo("# New tests\n");
+        assertThat(updated.metadata().tags()).containsExactlyInAnyOrder(Tag.TEST, Tag.FEATURE);
+        assertThat(result.getFirst()).isEqualTo(updated);
     }
 
     @Test
-    void rejectsStaleVersionsBeforeWritingAnyDocument() throws IOException {
+    void rejectsDuplicateIdsBeforeWritingAnyDocument() throws IOException {
         writeDocument("first", "BRANCH", "feature/orders", "TEST", "# First");
         writeDocument("second", "BRANCH", "feature/orders", "TEST", "# Second");
-        var documents = contextService.getContext(request("feature/orders", Tag.TEST));
-
         var updates = List.of(
-                ContextDocument.update("first", documents.get(0).version(), "# Changed first", Set.of(Tag.TEST)),
-                ContextDocument.update("second", "stale-version", "# Changed second", Set.of(Tag.TEST)));
+                update("first", "# Changed first", Tag.TEST),
+                update("first", "# Changed again", Tag.TEST));
 
         assertThatThrownBy(() -> contextService.updateContext(
                 new UpdateContextInput("Change both", "feature/orders", updates)))
-                .hasMessageContaining("changed since it was read");
+                .hasMessageContaining("requested more than once");
 
-        assertThat(get("feature/orders", Tag.TEST).markdown()).isEqualTo("# First\n");
+        assertThat(get("feature/orders", Tag.TEST).context()).isEqualTo("# First\n");
     }
 
     @Test
@@ -94,12 +93,16 @@ class ContextServiceTests {
         assertThatThrownBy(() -> contextService.updateContext(new UpdateContextInput(
                 "Wrong branch",
                 "feature/orders",
-                List.of(ContextDocument.update(search.id(), search.version(), "# Orders", Set.of(Tag.FEATURE))))))
+                List.of(update(search.id(), "# Orders", Tag.FEATURE)))))
                 .hasMessageContaining("does not belong to branch feature/orders");
     }
 
-    private ContextDocument get(String branch, Tag tag) {
+    private McpContextDocument get(String branch, Tag tag) {
         return contextService.getContext(request(branch, tag)).getFirst();
+    }
+
+    private McpContextDocument update(String id, String context, Tag... tags) {
+        return new McpContextDocument(id, context, new ContextMetadata(ContextScope.BRANCH, Set.of(tags)));
     }
 
     private GetContextInput request(String branch, Tag tag) {

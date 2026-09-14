@@ -5,14 +5,14 @@ A small Spring Boot MCP server that gives a coding assistant tagged, repository-
 ## The two MCP tools
 
 1. `get_context` receives the task, a short description, the exact Git branch and the tags chosen by the assistant.
-2. `update_context` replaces existing documents by ID and requires the version returned by `get_context`.
+2. `update_context` replaces existing documents by ID using their context and metadata.
 
 Retrieval uses two simple rules:
 
 - Global documents and documents for the exact requested branch are eligible.
 - A document is returned when any requested tag matches.
 
-Each result contains the complete Markdown body, stable document ID, version and tags. The assistant decides how to use the returned documents.
+Each result contains the complete Markdown body, stable document ID and metadata. The assistant decides how to use the returned documents.
 
 ## Context document format
 

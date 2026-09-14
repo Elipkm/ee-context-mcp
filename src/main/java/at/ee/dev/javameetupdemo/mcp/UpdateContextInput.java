@@ -1,11 +1,11 @@
 package at.ee.dev.javameetupdemo.mcp;
 
-import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
+import at.ee.dev.javameetupdemo.context.dto.McpContextDocument;
 
 import java.util.List;
 
 public record UpdateContextInput(
         String descriptionShort,
         String branch,
-        List<ContextDocument> documents) {
+        List<McpContextDocument> documents) {
 }
