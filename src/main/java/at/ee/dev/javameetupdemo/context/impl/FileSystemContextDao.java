@@ -1,8 +1,10 @@
-package at.ee.dev.javameetupdemo.context;
+package at.ee.dev.javameetupdemo.context.impl;
 
-import at.ee.dev.javameetupdemo.context.ContextModels.ContextScope;
-import at.ee.dev.javameetupdemo.context.ContextModels.StoredContextDocument;
-import at.ee.dev.javameetupdemo.context.ContextModels.Tag;
+import at.ee.dev.javameetupdemo.context.RuntimeException;
+import at.ee.dev.javameetupdemo.context.api.ContextDao;
+import at.ee.dev.javameetupdemo.context.enumm.ContextScope;
+import at.ee.dev.javameetupdemo.context.dto.StoredContextDocument;
+import at.ee.dev.javameetupdemo.context.enumm.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,7 +54,7 @@ public class FileSystemContextDao implements ContextDao {
             log.info("Loaded {} context documents from {}", documents.size(), contextDirectory);
             return documents;
         } catch (IOException exception) {
-            throw new ContextEngineException("Could not list context documents", exception);
+            throw new RuntimeException("Could not list context documents", exception);
         }
     }
 
@@ -67,7 +69,7 @@ public class FileSystemContextDao implements ContextDao {
             return new StoredContextDocument(document.id(), document.path(), document.markdown(), hash(fileContent),
                     document.scope(), document.branch(), Set.copyOf(document.tags()));
         } catch (IOException exception) {
-            throw new ContextEngineException("Could not write context document " + document.id(), exception);
+            throw new RuntimeException("Could not write context document " + document.id(), exception);
         }
     }
 
@@ -95,7 +97,7 @@ public class FileSystemContextDao implements ContextDao {
             String relativePath = repositoryRoot.relativize(path).toString().replace('\\', '/');
             return new StoredContextDocument(id, relativePath, markdown, hash(fileContent), scope, branch, tags);
         } catch (IOException exception) {
-            throw new ContextEngineException("Could not read context document " + path, exception);
+            throw new RuntimeException("Could not read context document " + path, exception);
         }
     }
 
@@ -184,19 +186,19 @@ public class FileSystemContextDao implements ContextDao {
         Set<String> ids = new HashSet<>();
         documents.forEach(document -> {
             if (!ids.add(document.id())) {
-                throw new ContextEngineException("Duplicate context document id: " + document.id());
+                throw new RuntimeException("Duplicate context document id: " + document.id());
             }
         });
     }
 
-    private ContextEngineException invalid(Path path, String reason) {
-        return new ContextEngineException("Invalid context document " + path + ": " + reason);
+    private RuntimeException invalid(Path path, String reason) {
+        return new RuntimeException("Invalid context document " + path + ": " + reason);
     }
 
     private Path resolve(String relativePath) {
         Path resolved = repositoryRoot.resolve(relativePath).normalize();
         if (!resolved.startsWith(repositoryRoot)) {
-            throw new ContextEngineException("Path leaves the configured repository: " + relativePath);
+            throw new RuntimeException("Path leaves the configured repository: " + relativePath);
         }
         return resolved;
     }

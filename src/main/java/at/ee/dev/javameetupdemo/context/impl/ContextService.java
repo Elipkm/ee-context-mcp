@@ -1,12 +1,14 @@
-package at.ee.dev.javameetupdemo.context;
+package at.ee.dev.javameetupdemo.context.impl;
 
-import at.ee.dev.javameetupdemo.context.ContextModels.ContextDocument;
-import at.ee.dev.javameetupdemo.context.ContextModels.ContextScope;
-import at.ee.dev.javameetupdemo.context.ContextModels.DocumentUpdate;
-import at.ee.dev.javameetupdemo.context.ContextModels.GetContextInput;
-import at.ee.dev.javameetupdemo.context.ContextModels.StoredContextDocument;
-import at.ee.dev.javameetupdemo.context.ContextModels.UpdatedDocument;
-import at.ee.dev.javameetupdemo.context.ContextModels.UpdateContextInput;
+import at.ee.dev.javameetupdemo.context.api.ContextDao;
+import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
+import at.ee.dev.javameetupdemo.context.enumm.ContextScope;
+import at.ee.dev.javameetupdemo.context.dto.DocumentUpdate;
+import at.ee.dev.javameetupdemo.mcp.GetContextInput;
+import at.ee.dev.javameetupdemo.context.dto.StoredContextDocument;
+import at.ee.dev.javameetupdemo.context.enumm.Tag;
+import at.ee.dev.javameetupdemo.context.dto.UpdatedDocument;
+import at.ee.dev.javameetupdemo.mcp.UpdateContextInput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -68,24 +70,24 @@ public class ContextService {
             Map<String, StoredContextDocument> storedById,
             Set<String> requestedIds) {
         if (update == null || isBlank(update.id()) || isBlank(update.expectedVersion()) || isBlank(update.markdown())) {
-            throw new ContextEngineException("Every document update needs an id, expectedVersion and markdown");
+            throw new RuntimeException("Every document update needs an id, expectedVersion and markdown");
         }
         if (update.tags() == null || update.tags().isEmpty()) {
-            throw new ContextEngineException("At least one tag is required for context document " + update.id());
+            throw new RuntimeException("At least one tag is required for context document " + update.id());
         }
         if (!requestedIds.add(update.id())) {
-            throw new ContextEngineException("Context document requested more than once: " + update.id());
+            throw new RuntimeException("Context document requested more than once: " + update.id());
         }
 
         StoredContextDocument stored = storedById.get(update.id());
         if (stored == null) {
-            throw new ContextEngineException("Unknown context document id: " + update.id());
+            throw new RuntimeException("Unknown context document id: " + update.id());
         }
         if (!isVisibleOnBranch(stored, branch)) {
-            throw new ContextEngineException("Context document " + update.id() + " does not belong to branch " + branch);
+            throw new RuntimeException("Context document " + update.id() + " does not belong to branch " + branch);
         }
         if (!stored.version().equals(update.expectedVersion())) {
-            throw new ContextEngineException("Context document " + update.id() + " changed since it was read");
+            throw new RuntimeException("Context document " + update.id() + " changed since it was read");
         }
 
         return new StoredContextDocument(stored.id(), stored.path(), update.markdown(), stored.version(),
@@ -96,25 +98,25 @@ public class ContextService {
         return document.scope() == ContextScope.GLOBAL || branch.equals(document.branch());
     }
 
-    private boolean hasAnyTag(StoredContextDocument document, Set<ContextModels.Tag> requestedTags) {
+    private boolean hasAnyTag(StoredContextDocument document, Set<Tag> requestedTags) {
         return document.tags().stream().anyMatch(requestedTags::contains);
     }
 
     private void validate(GetContextInput input) {
         if (input == null || isBlank(input.task()) || isBlank(input.descriptionShort()) || isBlank(input.branch())) {
-            throw new ContextEngineException("task, descriptionShort and branch are required");
+            throw new RuntimeException("task, descriptionShort and branch are required");
         }
         if (input.tags() == null || input.tags().isEmpty()) {
-            throw new ContextEngineException("At least one context tag is required");
+            throw new RuntimeException("At least one context tag is required");
         }
     }
 
     private void validate(UpdateContextInput input) {
         if (input == null || isBlank(input.descriptionShort()) || isBlank(input.branch())) {
-            throw new ContextEngineException("descriptionShort and branch are required");
+            throw new RuntimeException("descriptionShort and branch are required");
         }
         if (input.documents() == null || input.documents().isEmpty()) {
-            throw new ContextEngineException("At least one context document update is required");
+            throw new RuntimeException("At least one context document update is required");
         }
     }
 

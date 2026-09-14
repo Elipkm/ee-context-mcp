@@ -1,10 +1,8 @@
 package at.ee.dev.javameetupdemo.mcp;
 
-import at.ee.dev.javameetupdemo.context.ContextModels.ContextDocument;
-import at.ee.dev.javameetupdemo.context.ContextModels.GetContextInput;
-import at.ee.dev.javameetupdemo.context.ContextModels.UpdatedDocument;
-import at.ee.dev.javameetupdemo.context.ContextModels.UpdateContextInput;
-import at.ee.dev.javameetupdemo.context.ContextService;
+import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
+import at.ee.dev.javameetupdemo.context.dto.UpdatedDocument;
+import at.ee.dev.javameetupdemo.context.impl.ContextService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;

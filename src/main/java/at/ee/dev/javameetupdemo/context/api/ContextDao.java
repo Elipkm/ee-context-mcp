@@ -1,6 +1,6 @@
-package at.ee.dev.javameetupdemo.context;
+package at.ee.dev.javameetupdemo.context.api;
 
-import at.ee.dev.javameetupdemo.context.ContextModels.StoredContextDocument;
+import at.ee.dev.javameetupdemo.context.dto.StoredContextDocument;
 
 import java.util.List;
 

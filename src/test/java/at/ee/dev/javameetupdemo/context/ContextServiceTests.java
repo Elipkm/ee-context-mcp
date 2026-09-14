@@ -1,9 +1,12 @@
 package at.ee.dev.javameetupdemo.context;
 
-import at.ee.dev.javameetupdemo.context.ContextModels.DocumentUpdate;
-import at.ee.dev.javameetupdemo.context.ContextModels.GetContextInput;
-import at.ee.dev.javameetupdemo.context.ContextModels.Tag;
-import at.ee.dev.javameetupdemo.context.ContextModels.UpdateContextInput;
+import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
+import at.ee.dev.javameetupdemo.context.dto.DocumentUpdate;
+import at.ee.dev.javameetupdemo.context.impl.ContextService;
+import at.ee.dev.javameetupdemo.context.impl.FileSystemContextDao;
+import at.ee.dev.javameetupdemo.mcp.GetContextInput;
+import at.ee.dev.javameetupdemo.context.enumm.Tag;
+import at.ee.dev.javameetupdemo.mcp.UpdateContextInput;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -44,7 +47,7 @@ class ContextServiceTests {
 
         var result = contextService.getContext(request);
 
-        assertThat(result).extracting(ContextModels.ContextDocument::id)
+        assertThat(result).extracting(ContextDocument::id)
                 .containsExactly("global-architecture", "order-tests");
         assertThat(result.getFirst().markdown()).isEqualTo("# Architecture\n");
         assertThat(result.getFirst().version()).hasSize(64);
@@ -96,7 +99,7 @@ class ContextServiceTests {
                 .hasMessageContaining("does not belong to branch feature/orders");
     }
 
-    private ContextModels.ContextDocument get(String branch, Tag tag) {
+    private ContextDocument get(String branch, Tag tag) {
         return contextService.getContext(request(branch, tag)).getFirst();
     }
 
