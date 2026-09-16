@@ -75,16 +75,16 @@ public class ContextService implements IContextService {
         if (update == null || isBlank(update.id()) || isBlank(update.context())) {
             throw new RuntimeException("Every context document needs an id and context");
         }
+        if (!update.id().matches("[a-z0-9][a-z0-9-]*")) {
+            throw new RuntimeException("Context document id must contain only lowercase letters, numbers and hyphens");
+        }
         validateMetadata(update.id(), update.metadata());
         if (!requestedIds.add(update.id())) {
             throw new RuntimeException("Context document requested more than once: " + update.id());
         }
 
         ContextDocument stored = storedById.get(update.id());
-        if (stored == null) {
-            throw new RuntimeException("Unknown context document id: " + update.id());
-        }
-        if (!isVisibleOnBranch(stored, branch)) {
+        if (stored != null && !isVisibleOnBranch(stored, branch)) {
             throw new RuntimeException("Context document " + update.id() + " does not belong to branch " + branch);
         }
 
@@ -92,7 +92,8 @@ public class ContextService implements IContextService {
                 update.metadata().scope(), Set.copyOf(update.metadata().tags()));
         String documentBranch = metadata.scope() == ContextScope.GLOBAL ? null : branch;
         return new ContextDocument(
-                stored.id(), stored.path(), update.context(), stored.version(), documentBranch, metadata);
+                update.id(), stored == null ? "engineering-context/" + update.id() + ".md" : stored.path(),
+                update.context(), stored == null ? null : stored.version(), documentBranch, metadata);
     }
 
     private McpContextDocument toMcpDocument(ContextDocument document) {

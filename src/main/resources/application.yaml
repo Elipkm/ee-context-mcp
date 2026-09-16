@@ -17,4 +17,4 @@ server:
 
 context-engine:
   #repository-root: ${user.dir}
-  repository-root: C:\Users\elipk\Desktop\Elias_2026\JavaMeetupDemo\UseDemo_DevelopGame
+  repository-root: C:\Users\elipk\Desktop\Elias_2026\JavaMeetupDemo\sampleEnterpriseBetterContextMCP

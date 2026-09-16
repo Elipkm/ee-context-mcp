@@ -5,7 +5,9 @@ A small Spring Boot MCP server that gives a coding assistant tagged, repository-
 ## The two MCP tools
 
 1. `get_context` receives the task, a short description, the exact Git branch and the tags chosen by the assistant.
-2. `update_context` replaces existing documents by ID using their context and metadata.
+2. `update_context` creates documents for new IDs or fully replaces existing documents by ID using their context and metadata.
+
+New documents are stored at `engineering-context/<id>.md`. IDs must contain only lowercase letters, numbers and hyphens, starting with a letter or number. Branch-scoped documents use the exact branch from the request; global documents have no branch. Existing documents keep their file path and must be visible on the requested branch. Each batch is validated before any documents are written.
 
 Retrieval uses two simple rules:
 
@@ -55,8 +57,42 @@ Set the repository in `application.yaml` or override it when starting the applic
 
 HTTP MCP transport has no authentication in this demo, so the server binds to localhost only.
 
-For using add to your working Repository AGENTS.md the following instructions:
-    """use developer-context mcp server to manage and get relevant context
-        before starting the task get relevant context by calling the get_context tool
-        when finished give a brief summary what context must be persisted and 
-        after user confirmation call tool update_context"""
+## Recommended repository instructions
+
+Add the following to the working repository's `AGENTS.md`:
+
+```markdown
+Use the developer-context MCP server to manage relevant engineering context.
+
+Before starting a task, call `get_context` with the exact Git branch and the
+relevant tags.
+
+After completing a task, perform a brief context check using the context already
+retrieved for the task. Treat an explicit developer correction or reusable
+instruction about how code must, must not or should be written as a strong
+context candidate. This includes preferences expressed while correcting an
+implementation, even when the resulting code now demonstrates the preferred
+pattern. Also check for new or changed architectural decisions, business rules,
+constraints, rationale and unresolved risks that will materially affect future
+work.
+
+If not, state "No durable context change" and stop. Do not call
+`update_context`.
+
+If yes, show the developer the exact minimal context diff. For every change,
+state why it will help future work, why it is not already covered and which
+document should own it. Distinguish a rule from the implementation that exposed
+it: save the reusable rule, not the refactoring summary. Do not rescan the
+repository, repeat canonical documentation, or include task history,
+implementation inventories, setup details, transient status or test results.
+Prefer updating one existing canonical document and keep the proposal below
+150 words.
+
+Example: if the developer says "never use native queries, and never query from
+a service", propose adding that repository-wide persistence rule to the
+canonical architecture or Java guidelines. Do not save the list of classes
+changed during the refactoring.
+
+Call `update_context` only after the developer has reviewed and explicitly
+approved the exact content. Submit exactly the approved content.
+```

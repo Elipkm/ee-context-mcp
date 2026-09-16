@@ -12,7 +12,7 @@ tags: [ARCHITECTURE, FEATURE, IMPL]
 - Inputs are structured DTOs assembled by the coding assistant.
 - Retrieval returns complete documents with IDs, versions and tags.
 - Global and exact-branch documents are filtered with OR tag matching.
-- Updates are full replacements and reject stale versions.
+- Updates create new documents by ID or fully replace existing documents visible on the requested branch.
 - Local Markdown access is replaceable through `ContextDao`.
 
 ## Current decisions

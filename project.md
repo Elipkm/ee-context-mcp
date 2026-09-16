@@ -20,8 +20,10 @@ The central idea is simple:
 2. It calls `get_context` with the exact branch and relevant tags.
 3. The engine returns matching documents with stable IDs and metadata.
 4. The assistant implements and tests the change.
-5. When context has changed, the assistant calls `update_context` with complete replacements.
-6. The engine validates and writes the replacements.
+5. The assistant performs a brief check for new, durable and non-duplicative engineering knowledge. Explicit developer corrections and reusable coding instructions are strong candidates; routine task details are not.
+6. When qualifying knowledge exists, the assistant shows the developer an exact minimal diff for review.
+7. After explicit approval, the assistant calls `update_context` with only the approved complete documents to create or replace by ID.
+8. The engine validates and writes the documents, including when the context store is empty.
 
 ## Selection rules
 

@@ -34,6 +34,61 @@ class ContextServiceTests {
     }
 
     @Test
+    void createsDocumentsInAnEmptyRepositoryAndCanReplaceThem() {
+        var branchDocument = update("order-tests", "# Order tests", Tag.TEST);
+        var globalDocument = new McpContextDocument("architecture", "# Architecture",
+                new ContextMetadata(ContextScope.GLOBAL, Set.of(Tag.ARCHITECTURE)));
+
+        var result = contextService.updateContext(new UpdateContextInput(
+                "Initialize context", "feature/orders", List.of(branchDocument, globalDocument)));
+
+        assertThat(repository.resolve("engineering-context/order-tests.md")).exists();
+        assertThat(repository.resolve("engineering-context/architecture.md")).exists();
+        assertThat(get("feature/orders", Tag.TEST)).isEqualTo(result.getFirst());
+        assertThat(contextService.getContext(request("feature/search", Tag.TEST))).isEmpty();
+        assertThat(get("feature/search", Tag.ARCHITECTURE)).isEqualTo(result.get(1));
+
+        contextService.updateContext(new UpdateContextInput("Revise tests", "feature/orders",
+                List.of(update("order-tests", "# Revised tests", Tag.TEST))));
+
+        assertThat(get("feature/orders", Tag.TEST).context()).isEqualTo("# Revised tests\n");
+    }
+
+    @Test
+    void createsAndReplacesDocumentsInTheSameBatch() throws IOException {
+        writeDocument("existing", "BRANCH", "feature/orders", "TEST", "# Old");
+
+        var result = contextService.updateContext(new UpdateContextInput("Save context", "feature/orders",
+                List.of(update("existing", "# Updated", Tag.TEST), update("new", "# New", Tag.TEST))));
+
+        assertThat(result).extracting(McpContextDocument::context).containsExactly("# Updated\n", "# New\n");
+        assertThat(contextService.getContext(request("feature/orders", Tag.TEST)))
+                .containsExactlyElementsOf(result);
+    }
+
+    @Test
+    void rejectsUnsafeNewIdsBeforeWritingAnyDocument() {
+        for (String invalidId : List.of("../escape", "nested/document", "UPPERCASE", "bad\nid")) {
+            assertThatThrownBy(() -> contextService.updateContext(new UpdateContextInput(
+                    "Invalid creation", "feature/orders", List.of(
+                    update("valid", "# Valid", Tag.TEST), update(invalidId, "# Invalid", Tag.TEST)))))
+                    .hasMessageContaining("id must contain only");
+        }
+
+        assertThat(repository.resolve("engineering-context")).doesNotExist();
+    }
+
+    @Test
+    void rejectsDuplicateNewIdsBeforeCreatingAnyDocument() {
+        assertThatThrownBy(() -> contextService.updateContext(new UpdateContextInput(
+                "Duplicate creation", "feature/orders", List.of(
+                update("new", "# First", Tag.TEST), update("new", "# Second", Tag.TEST)))))
+                .hasMessageContaining("requested more than once");
+
+        assertThat(repository.resolve("engineering-context")).doesNotExist();
+    }
+
+    @Test
     void returnsMatchingGlobalAndExactBranchDocumentsUsingOrTags() throws IOException {
         writeDocument("global-architecture", "GLOBAL", "", "ARCHITECTURE", "# Architecture");
         writeDocument("global-domain", "GLOBAL", "", "DOMAIN", "# Domain");

@@ -35,11 +35,13 @@ public class ContextEngineTools {
 
     @McpTool(
             name = "update_context",
-            description = "Fully replace existing context documents by id. Every replacement must contain context and metadata.",
+            description = """
+                    Create or fully replace minimal, developer-approved engineering context. Explicit developer corrections and reusable instructions about how code must, must not or should be written are high-priority context candidates, even when the code now demonstrates the preferred pattern. Also store new or changed durable decisions, business rules, constraints, rationale or unresolved risks that will materially help future work. Do not store task summaries, test results, transient status, repository inventories, setup details or information already documented elsewhere. Prefer updating the canonical existing document. No call is needed when nothing qualifies. Every submitted document must contain its complete context and metadata; new ids may contain only lowercase letters, numbers and hyphens.
+                    """,
             generateOutputSchema = true,
             annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = true, idempotentHint = false, openWorldHint = false))
     public List<McpContextDocument> updateContext(
-            @McpToolParam(description = "Exact Git branch, reason and full document replacements", required = true)
+            @McpToolParam(description = "Developer-approved minimal update: exact Git branch, concise reason for the durable knowledge change, and only the complete documents that must be created or replaced", required = true)
             UpdateContextInput input) {
         log.info("MCP update_context request received");
         return contextService.updateContext(input);
