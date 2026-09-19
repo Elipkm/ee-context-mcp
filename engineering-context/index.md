@@ -3,10 +3,11 @@ id: context-catalog
 scope: GLOBAL
 branch:
 tags: [DOCUMENTATION]
+subjects: [domain:context-engine]
 ---
 # Engineering context map
 
-Each Markdown document below `engineering-context/` has a stable ID, a scope and tags in its front matter. The engine discovers the documents directly; this page is a human-readable catalog.
+Each Markdown document below `engineering-context/` has a stable ID, branch validity, classification tags and optional subjects, relations and load policy. The engine selects by subjects and connections; this page is a human-readable catalog. Available subjects include `domain:context-engine`, `component:context-service`, `component:context-storage`, `component:mcp-server`, `component:context-engine`, `use-case:get-context` and `use-case:update-context`.
 
 ## Global project context
 
@@ -14,7 +15,7 @@ Each Markdown document below `engineering-context/` has a stable ID, a scope and
 - [Business goals](core/business-goals.md) — Demo purpose, success criteria and audience value.
 - [Architecture](core/architecture.md) — Two-tool MCP contract, filtering, versions and DAO integration.
 - [Tech stack](core/tech-stack.md) — Java, Spring Boot, Spring AI MCP, Maven and Markdown choices.
-- [Constraints](core/constraints.md) — Branch scope, tag matching and safe replacement rules.
+- [Constraints](core/constraints.md) — Branch validity, subject matching and replacement rules.
 
 ## Engineering guidelines
 

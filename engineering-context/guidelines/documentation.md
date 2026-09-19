@@ -3,6 +3,7 @@ id: documentation-guidelines
 scope: GLOBAL
 branch:
 tags: [DOCUMENTATION]
+subjects: [use-case:update-context]
 ---
 # Documentation guidelines
 

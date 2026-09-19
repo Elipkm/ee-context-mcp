@@ -23,11 +23,13 @@ public class ContextEngineTools {
 
     @McpTool(
             name = "get_context",
-            description = "Get context documents relevant to a task. Global and exact-branch documents are matched by any requested tag.",
+            description = """
+                    Call only for feature or bug work that needs broader system context, such as domain rules, use cases or cross-component constraints. Skip routine local edits. Provide short subject terms derived from the task; the server resolves its curated glossary aliases, or accepts known canonical identifiers. Unknown terms return an error with available subjects and aliases. Within branch-valid documents, return ALWAYS baselines, resolved subject matches and their outgoing relations for one hop. Tags classify documents but do not filter retrieval. GLOBAL means valid on all branches, not always loaded.
+                    """,
             generateOutputSchema = true,
             annotations = @McpTool.McpAnnotations(readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false))
     public List<McpContextDocument> getContext(
-            @McpToolParam(description = "Task, exact Git branch and context tags selected by the coding agent", required = true)
+            @McpToolParam(description = "Feature or bug task, short description, exact Git branch and at least one simple subject term from the task (domain, component or use case)", required = true)
             GetContextInput input) {
         log.info("MCP get_context request received");
         return contextService.getContext(input);

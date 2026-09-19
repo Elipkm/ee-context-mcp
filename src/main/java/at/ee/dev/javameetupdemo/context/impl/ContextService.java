@@ -6,7 +6,7 @@ import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
 import at.ee.dev.javameetupdemo.context.dto.ContextMetadata;
 import at.ee.dev.javameetupdemo.context.dto.McpContextDocument;
 import at.ee.dev.javameetupdemo.context.enumm.ContextScope;
-import at.ee.dev.javameetupdemo.context.enumm.Tag;
+import at.ee.dev.javameetupdemo.context.enumm.ContextLoad;
 import at.ee.dev.javameetupdemo.mcp.GetContextInput;
 import at.ee.dev.javameetupdemo.mcp.UpdateContextInput;
 import org.slf4j.Logger;
@@ -15,9 +15,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 @Service
 public class ContextService implements IContextService {
@@ -34,15 +37,81 @@ public class ContextService implements IContextService {
     public List<McpContextDocument> getContext(GetContextInput input) {
         validate(input);
 
-        List<McpContextDocument> result = contextDao.findAll().stream()
+        List<ContextDocument> documents = contextDao.findAll();
+        Set<String> subjects = resolveSubjects(input.subjects(), documents, contextDao.readSubjectAliases());
+        Map<String, ContextDocument> allById = new HashMap<>();
+        documents.forEach(document -> allById.put(document.id(), document));
+        List<ContextDocument> visible = documents.stream()
                 .filter(document -> this.isVisibleOnBranch(document, input.branch()))
-                .filter(document -> this.hasAnyTag(document, input.tags()))
-                .map(this::toMcpDocument)
                 .toList();
+        List<ContextDocument> matches = visible.stream()
+                .filter(document -> document.metadata().subjects().stream().anyMatch(subjects::contains))
+                .toList();
+        Map<String, ContextDocument> selected = new LinkedHashMap<>();
+        visible.stream().filter(document -> document.metadata().load() == ContextLoad.ALWAYS)
+                .forEach(document -> selected.put(document.id(), document));
+        matches.forEach(document -> selected.put(document.id(), document));
+        // Expand the fixed set of subject matches, never the growing result set.
+        for (ContextDocument document : matches) {
+            for (var relation : document.metadata().relations()) {
+                ContextDocument target = allById.get(relation.target());
+                if (target == null) {
+                    throw new IllegalStateException("Context document " + document.id()
+                            + " references missing document " + relation.target());
+                }
+                if (isVisibleOnBranch(target, input.branch())) {
+                    selected.putIfAbsent(target.id(), target);
+                }
+            }
+        }
+        List<McpContextDocument> result = selected.values().stream().map(this::toMcpDocument).toList();
 
-        log.info("Selected context documents ids={} branch={} tags={}",
-                result.stream().map(McpContextDocument::id).toList(), input.branch(), input.tags());
+        log.info("Selected context documents ids={} branch={} requestedSubjects={} resolvedSubjects={}",
+                result.stream().map(McpContextDocument::id).toList(), input.branch(), input.subjects(), subjects);
         return result;
+    }
+
+    private Set<String> resolveSubjects(Set<String> requested, List<ContextDocument> documents,
+                                        Map<String, List<String>> glossary) {
+        Set<String> canonicalSubjects = new TreeSet<>(glossary.keySet());
+        documents.forEach(document -> canonicalSubjects.addAll(document.metadata().subjects()));
+        Map<String, String> subjectByTerm = new HashMap<>();
+        // Reserve canonical identifiers before adding aliases, so aliases cannot shadow them.
+        canonicalSubjects.forEach(subject -> registerTerm(subjectByTerm, subject, subject));
+        glossary.forEach((subject, aliases) -> aliases.forEach(alias -> registerTerm(subjectByTerm, alias, subject)));
+
+        Set<String> resolved = new TreeSet<>();
+        Set<String> unknown = new TreeSet<>();
+        for (String term : requested) {
+            String subject = subjectByTerm.get(normalizeTerm(term));
+            if (subject == null) {
+                unknown.add(term);
+            } else {
+                resolved.add(subject);
+            }
+        }
+        if (!unknown.isEmpty()) {
+            List<String> available = canonicalSubjects.stream().limit(20)
+                    .map(subject -> subject + (glossary.getOrDefault(subject, List.of()).isEmpty()
+                            ? "" : " (aliases: " + String.join(", ", glossary.get(subject)) + ")"))
+                    .toList();
+            throw new IllegalArgumentException("Unknown subjects: " + unknown + ". Available subjects"
+                    + (canonicalSubjects.size() > 20 ? " (first 20)" : "") + ": " + available
+                    + ". Use a listed subject or alias; maintain synonyms in engineering-context/subjects.yaml.");
+        }
+        return resolved;
+    }
+
+    private void registerTerm(Map<String, String> subjectByTerm, String term, String subject) {
+        String previous = subjectByTerm.putIfAbsent(normalizeTerm(term), subject);
+        if (previous != null && !previous.equals(subject)) {
+            throw new IllegalArgumentException("Ambiguous subject alias '" + term + "': " + previous
+                    + " and " + subject + ". Each glossary alias must identify one subject.");
+        }
+    }
+
+    private String normalizeTerm(String term) {
+        return term.strip().toLowerCase(Locale.ROOT);
     }
 
     @Override
@@ -88,8 +157,7 @@ public class ContextService implements IContextService {
             throw new RuntimeException("Context document " + update.id() + " does not belong to branch " + branch);
         }
 
-        ContextMetadata metadata = new ContextMetadata(
-                update.metadata().scope(), Set.copyOf(update.metadata().tags()));
+        ContextMetadata metadata = update.metadata();
         String documentBranch = metadata.scope() == ContextScope.GLOBAL ? null : branch;
         return new ContextDocument(
                 update.id(), stored == null ? "engineering-context/" + update.id() + ".md" : stored.path(),
@@ -104,16 +172,17 @@ public class ContextService implements IContextService {
         return document.metadata().scope() == ContextScope.GLOBAL || branch.equals(document.branch());
     }
 
-    private boolean hasAnyTag(ContextDocument document, Set<Tag> requestedTags) {
-        return document.metadata().tags().stream().anyMatch(requestedTags::contains);
-    }
-
     private void validate(GetContextInput input) {
         if (input == null || isBlank(input.task()) || isBlank(input.descriptionShort()) || isBlank(input.branch())) {
             throw new RuntimeException("task, descriptionShort and branch are required");
         }
-        if (input.tags() == null || input.tags().isEmpty()) {
-            throw new RuntimeException("At least one context tag is required");
+        if (input.subjects() == null || input.subjects().isEmpty()) {
+            throw new RuntimeException("At least one subject is required");
+        }
+        for (String subject : input.subjects()) {
+            if (isBlank(subject)) {
+                throw new RuntimeException("Each subject must be a non-blank term or canonical identifier");
+            }
         }
     }
 

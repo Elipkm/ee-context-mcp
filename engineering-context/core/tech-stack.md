@@ -3,6 +3,7 @@ id: tech-stack
 scope: GLOBAL
 branch:
 tags: [ARCHITECTURE, IMPL]
+subjects: [component:mcp-server]
 ---
 # Tech stack
 

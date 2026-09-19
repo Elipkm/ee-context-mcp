@@ -3,6 +3,7 @@ id: business-goals
 scope: GLOBAL
 branch:
 tags: [BUSINESS_RULE, DOMAIN]
+subjects: [domain:context-engine]
 ---
 # Business goals
 

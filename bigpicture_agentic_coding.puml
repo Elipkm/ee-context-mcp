@@ -1,0 +1,35 @@
+@startuml
+title Agentic Coding Context Flow
+
+top to bottom direction
+
+rectangle "Prompt" as prompt
+
+rectangle "MCP Tools context\nCurrent external facts and decisions" as mcp
+database domain_knowledge
+
+package "Repository" {
+rectangle "Codebase" as codebase
+rectangle "AGENTS.md\nSmall always-on rules and routing" as agentmd
+rectangle "Skills.md\nRepeatable workflows" as B
+}
+
+package "Agentic coding tool provider" {
+    rectangle "Agent\nCodex, Claude, or another implementation" as codex
+    rectangle "Codebase navigation\nSearch, read, select relevant context" as codenavi
+
+    codex --> codenavi
+}
+
+prompt --> codex
+
+
+codex --> agentmd
+codex --> B
+codex --> mcp
+mcp ...> domain_knowledge
+
+codenavi --> codebase
+
+
+@enduml

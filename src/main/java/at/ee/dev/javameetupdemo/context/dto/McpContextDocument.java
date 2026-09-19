@@ -7,6 +7,6 @@ public record McpContextDocument
          String id,
          @JsonPropertyDescription("Concise durable knowledge not already documented elsewhere, including explicit developer rules; provide the complete body when replacing a document")
          String context,
-         @JsonPropertyDescription("Narrowest correct scope and only the tags needed for future retrieval")
+         @JsonPropertyDescription("Branch validity, classification tags, subjects, outgoing document relations and load policy; reserve ALWAYS for short baseline context")
          ContextMetadata metadata){
 }

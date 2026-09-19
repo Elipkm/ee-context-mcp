@@ -3,6 +3,7 @@ id: implementation-guidelines
 scope: GLOBAL
 branch:
 tags: [IMPL]
+subjects: [component:context-service, component:context-storage, component:mcp-server]
 ---
 # Implementation guidelines
 

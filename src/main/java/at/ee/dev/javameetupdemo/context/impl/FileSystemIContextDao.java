@@ -4,10 +4,14 @@ import at.ee.dev.javameetupdemo.context.api.IContextDao;
 import at.ee.dev.javameetupdemo.context.enumm.ContextScope;
 import at.ee.dev.javameetupdemo.context.dto.ContextDocument;
 import at.ee.dev.javameetupdemo.context.dto.ContextMetadata;
+import at.ee.dev.javameetupdemo.context.dto.ContextRelation;
+import at.ee.dev.javameetupdemo.context.enumm.ContextLoad;
 import at.ee.dev.javameetupdemo.context.enumm.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.YamlMapFactoryBean;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
@@ -19,7 +23,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Repository
@@ -59,6 +65,39 @@ public class FileSystemIContextDao implements IContextDao {
     }
 
     @Override
+    public Map<String, List<String>> readSubjectAliases() {
+        Path path = resolve(CONTEXT_DIRECTORY + "/subjects.yaml");
+        if (!Files.exists(path)) {
+            return Map.of();
+        }
+        try {
+            Map<String, Object> glossary = parseMetadata(Files.readString(path), path);
+            if (!(glossary.get("subjects") instanceof Map<?, ?> subjects)) {
+                throw invalid(path, "glossary needs a subjects mapping");
+            }
+            Map<String, List<String>> aliases = new LinkedHashMap<>();
+            for (var entry : subjects.entrySet()) {
+                String subject = stringValue(entry.getKey(), "subject", path);
+                if (!subject.matches("[a-z][a-z0-9-]*:[a-z0-9][a-z0-9-]*")) {
+                    throw invalid(path, "glossary subject must use kind:name format: " + subject);
+                }
+                if (!(entry.getValue() instanceof Map<?, ?> details)
+                        || !(details.get("aliases") instanceof List<?> terms)) {
+                    throw invalid(path, "subject " + subject + " needs an aliases list");
+                }
+                List<String> names = terms.stream().map(term -> stringValue(term, "alias", path)).toList();
+                if (names.stream().anyMatch(String::isBlank)) {
+                    throw invalid(path, "subject " + subject + " has a blank alias");
+                }
+                aliases.put(subject, names);
+            }
+            return Map.copyOf(aliases);
+        } catch (IOException exception) {
+            throw new RuntimeException("Could not read subject glossary " + path, exception);
+        }
+    }
+
+    @Override
     public ContextDocument write(ContextDocument document) {
         Path path = resolve(document.path());
         String fileContent = serialize(document);
@@ -67,7 +106,7 @@ public class FileSystemIContextDao implements IContextDao {
             Files.writeString(path, fileContent);
             log.info("Updated context document id={} path={}", document.id(), document.path());
             return new ContextDocument(document.id(), document.path(), normalizeMarkdown(document.markdown()), hash(fileContent),
-                    document.branch(), new ContextMetadata(document.metadata().scope(), Set.copyOf(document.metadata().tags())));
+                    document.branch(), document.metadata());
         } catch (IOException exception) {
             throw new RuntimeException("Could not write context document " + document.id(), exception);
         }
@@ -86,17 +125,24 @@ public class FileSystemIContextDao implements IContextDao {
                 throw invalid(path, "front matter is not closed");
             }
 
-            String metadata = normalized.substring(4, metadataEnd);
+            Map<String, Object> metadata = parseMetadata(normalized.substring(4, metadataEnd), path);
             String markdown = normalized.substring(metadataEnd + 5);
-            String id = metadataValue(metadata, "id", path);
-            ContextScope scope = parseScope(metadataValue(metadata, "scope", path), path);
-            String branch = optionalMetadataValue(metadata, "branch");
-            Set<Tag> tags = parseTags(metadataValue(metadata, "tags", path), path);
+            String id = stringValue(metadata.get("id"), "id", path);
+            ContextScope scope = parseScope(stringValue(metadata.get("scope"), "scope", path), path);
+            String branch = metadata.get("branch") == null ? "" : stringValue(metadata.get("branch"), "branch", path);
+            Set<Tag> tags = parseTags(listValue(metadata, "tags", path), path);
+            Set<String> subjects = new LinkedHashSet<>();
+            for (Object subject : listValue(metadata, "subjects", path)) {
+                subjects.add(stringValue(subject, "subjects", path));
+            }
+            List<ContextRelation> relations = listValue(metadata, "relations", path).stream()
+                    .map(value -> parseRelation(value, path)).toList();
+            ContextLoad load = parseLoad(metadata.get("load"), path);
             validateMetadata(path, id, scope, branch, tags);
 
             String relativePath = repositoryRoot.relativize(path).toString().replace('\\', '/');
             return new ContextDocument(id, relativePath, markdown, hash(fileContent), branch,
-                    new ContextMetadata(scope, tags));
+                    new ContextMetadata(scope, tags, subjects, relations, load));
         } catch (IOException exception) {
             throw new RuntimeException("Could not read context document " + path, exception);
         }
@@ -110,14 +156,25 @@ public class FileSystemIContextDao implements IContextDao {
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("");
         String markdown = normalizeMarkdown(document.markdown());
+        StringBuilder extra = new StringBuilder("load: " + document.metadata().load() + "\n");
+        if (!document.metadata().subjects().isEmpty()) {
+            extra.append("subjects:\n");
+            document.metadata().subjects().stream().sorted()
+                    .forEach(subject -> extra.append("  - ").append(subject).append('\n'));
+        }
+        if (!document.metadata().relations().isEmpty()) {
+            extra.append("relations:\n");
+            document.metadata().relations().forEach(relation -> extra.append("  - type: ")
+                    .append(relation.type()).append("\n    target: ").append(relation.target()).append('\n'));
+        }
         return """
                 ---
                 id: %s
                 scope: %s
                 branch: %s
                 tags: [%s]
-                ---
-                %s""".formatted(document.id(), document.metadata().scope(), branch, tags, markdown);
+                %s---
+                %s""".formatted(document.id(), document.metadata().scope(), branch, tags, extra, markdown);
     }
 
     private String normalizeMarkdown(String markdown) {
@@ -125,22 +182,50 @@ public class FileSystemIContextDao implements IContextDao {
         return normalized.endsWith("\n") ? normalized : normalized + "\n";
     }
 
-    private String metadataValue(String metadata, String key, Path path) {
-        String value = optionalMetadataValue(metadata, key);
-        if (value == null || value.isBlank()) {
-            throw invalid(path, "missing metadata field '" + key + "'");
+    private Map<String, Object> parseMetadata(String yaml, Path path) {
+        try {
+            var factory = new YamlMapFactoryBean();
+            factory.setResources(new ByteArrayResource(yaml.getBytes(StandardCharsets.UTF_8)));
+            return factory.getObject();
+        } catch (RuntimeException exception) {
+            throw invalid(path, "could not parse YAML: " + exception.getMessage());
         }
-        return value;
     }
 
-    private String optionalMetadataValue(String metadata, String key) {
-        String prefix = key + ":";
-        return metadata.lines()
-                .map(String::trim)
-                .filter(line -> line.startsWith(prefix))
-                .map(line -> line.substring(prefix.length()).trim())
-                .findFirst()
-                .orElse(null);
+    private String stringValue(Object value, String field, Path path) {
+        if (!(value instanceof String text)) {
+            throw invalid(path, "metadata field '" + field + "' must be a string");
+        }
+        return text;
+    }
+
+    private List<?> listValue(Map<String, Object> metadata, String field, Path path) {
+        if (!metadata.containsKey(field)) {
+            return List.of();
+        }
+        if (!(metadata.get(field) instanceof List<?> values)) {
+            throw invalid(path, "metadata field '" + field + "' must be a YAML list");
+        }
+        return values;
+    }
+
+    private ContextRelation parseRelation(Object value, Path path) {
+        if (!(value instanceof Map<?, ?> relation)) {
+            throw invalid(path, "each relation must have a type and target");
+        }
+        return new ContextRelation(stringValue(relation.get("type"), "relation.type", path),
+                stringValue(relation.get("target"), "relation.target", path));
+    }
+
+    private ContextLoad parseLoad(Object value, Path path) {
+        if (value == null) {
+            return ContextLoad.SUBJECT_MATCH;
+        }
+        try {
+            return ContextLoad.valueOf(stringValue(value, "load", path));
+        } catch (IllegalArgumentException exception) {
+            throw invalid(path, "unknown load policy '" + value + "'");
+        }
     }
 
     private ContextScope parseScope(String value, Path path) {
@@ -151,20 +236,14 @@ public class FileSystemIContextDao implements IContextDao {
         }
     }
 
-    private Set<Tag> parseTags(String value, Path path) {
-        if (!value.startsWith("[") || !value.endsWith("]")) {
-            throw invalid(path, "tags must use [TAG, TAG] format");
-        }
-        String content = value.substring(1, value.length() - 1).trim();
-        if (content.isEmpty()) {
-            return Set.of();
-        }
+    private Set<Tag> parseTags(List<?> values, Path path) {
         Set<Tag> tags = new LinkedHashSet<>();
-        for (String valuePart : content.split(",")) {
+        for (Object value : values) {
+            String name = stringValue(value, "tags", path);
             try {
-                tags.add(Tag.valueOf(valuePart.trim()));
+                tags.add(Tag.valueOf(name));
             } catch (IllegalArgumentException exception) {
-                throw invalid(path, "unknown tag '" + valuePart.trim() + "'");
+                throw invalid(path, "unknown tag '" + name + "'");
             }
         }
         return Set.copyOf(tags);

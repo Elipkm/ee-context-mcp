@@ -1,0 +1,34 @@
+# Curated synonyms for this repository. Each alias must identify one subject.
+# Matching ignores case and surrounding whitespace; no fuzzy guessing is used.
+subjects:
+  domain:context-engine:
+    aliases:
+      - context management
+      - engineering knowledge
+  component:context-engine:
+    aliases:
+      - context engine
+      - context engine implementation
+  component:context-service:
+    aliases:
+      - context service
+      - context selection
+  component:context-storage:
+    aliases:
+      - context storage
+      - markdown storage
+      - file storage
+  component:mcp-server:
+    aliases:
+      - mcp server
+      - mcp endpoint
+  use-case:get-context:
+    aliases:
+      - context retrieval
+      - get context
+      - subject matching
+  use-case:update-context:
+    aliases:
+      - context update
+      - save context
+      - persist context
