@@ -1,3 +1,6 @@
+# ee-context-mcp
+idea: central interface for retrieving and persisting domain context
+
 # Personal Developer Context Engine
 
 A small Spring Boot MCP server that gives a coding assistant relevant, repository-local engineering context.
